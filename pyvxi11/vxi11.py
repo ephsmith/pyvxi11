@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import rpc
+from . import rpc
 
 DEVICE_CORE_PROG = 0x0607af
 DEVICE_CORE_VERS = 1
@@ -128,32 +128,32 @@ class Vxi11Client(rpc.RawTCPClient):
         log.debug('VXI-11 uses port %d', port)
 
         rpc.RawTCPClient.__init__(self, host, DEVICE_CORE_PROG,
-                DEVICE_CORE_VERS, port)
+                                  DEVICE_CORE_VERS, port)
 
     def create_link(self, id, lock_device, lock_timeout, name):
         params = (id, lock_device, lock_timeout, name)
         return self.make_call(CREATE_LINK, params,
-                self.packer.pack_create_link_parms,
-                self.unpacker.unpack_create_link_resp)
+                              self.packer.pack_create_link_parms,
+                              self.unpacker.unpack_create_link_resp)
 
     def device_write(self, link, io_timeout, lock_timeout, flags, data):
         params = (link, io_timeout, lock_timeout, flags, data)
         return self.make_call(DEVICE_WRITE, params,
-                self.packer.pack_device_write_parms,
-                self.unpacker.unpack_device_write_resp)
+                              self.packer.pack_device_write_parms,
+                              self.unpacker.unpack_device_write_resp)
 
     def device_read(self, link, request_size, io_timeout, lock_timeout, flags,
-            term_char):
+                    term_char):
         params = (link, request_size, io_timeout, lock_timeout, flags,
-                term_char)
+                  term_char)
         return self.make_call(DEVICE_READ, params,
-                self.packer.pack_device_read_parms,
-                self.unpacker.unpack_device_read_resp)
+                              self.packer.pack_device_read_parms,
+                              self.unpacker.unpack_device_read_resp)
 
     def destroy_link(self, link):
         return self.make_call(DESTROY_LINK, link,
-                self.packer.pack_device_link,
-                self.unpacker.unpack_device_error)
+                              self.packer.pack_device_link,
+                              self.unpacker.unpack_device_error)
 
 
 class Vxi11Error(Exception):
@@ -180,7 +180,7 @@ class Vxi11:
         if client_id is None:
             client_id = id(self) & 0x7fffffff
         error, link_id, abort_port, max_recv_size = \
-                self.vxi11_client.create_link(client_id, 0, 0, self.name)
+                        self.vxi11_client.create_link(client_id, 0, 0, self.name)
 
         if error != 0:
             raise RuntimeError('TBD')
@@ -190,7 +190,7 @@ class Vxi11:
         max_recv_size = min(max_recv_size, 16*1024)
 
         log.debug('link id is %d, max_recv_size is %d',
-                link_id, max_recv_size)
+                  link_id, max_recv_size)
 
         self.link_id = link_id
         self.max_recv_size = max_recv_size
@@ -207,13 +207,15 @@ class Vxi11:
         flags = 0
         # split into chunks
         msg_chunks = list(chunks(message, self.max_recv_size))
-        for (n,chunk) in enumerate(msg_chunks):
+        for (n, chunk) in enumerate(msg_chunks):
             if n == len(msg_chunks)-1:
                 flags = OP_FLAG_END
             else:
                 flags = 0
             error, size = self.vxi11_client.device_write(self.link_id,
-                    io_timeout, lock_timeout, flags, chunk)
+                                                         io_timeout,
+                                                         lock_timeout,
+                                                         flags, chunk)
             if error != ERR_NO_ERROR:
                 raise Vxi11Error(error)
             assert size == len(chunk)
@@ -232,7 +234,11 @@ class Vxi11:
         data_list = list()
         while reason == 0:
             error, reason, data = self.vxi11_client.device_read(self.link_id,
-                    read_size, io_timeout, lock_timeout, flags, term_char)
+                                                                read_size,
+                                                                io_timeout,
+                                                                lock_timeout,
+                                                                flags,
+                                                                term_char)
             if error != ERR_NO_ERROR:
                 raise Vxi11Error(error)
             data_list.append(data)

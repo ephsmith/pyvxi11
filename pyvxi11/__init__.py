@@ -3,4 +3,4 @@ try:
 except ImportError:
     __version__ = 'dev'
 
-from vxi11 import Vxi11, Vxi11Error
+from .vxi11 import Vxi11, Vxi11Error

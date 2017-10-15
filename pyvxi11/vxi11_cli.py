@@ -24,14 +24,18 @@ import os.path
 import time
 import sys
 import logging
-import readline
 from optparse import OptionParser
 
 from pyvxi11 import Vxi11, Vxi11Error, __version__
 
+# Use correct input method for Python 3
+if sys.version_info.major == 3:
+    raw_input = input
+
 LOCAL_COMMANDS = {
         '%SLEEP': (1, 1, lambda a: time.sleep(float(a[0])/1000)),
 }
+
 
 def process_local_command(cmd):
     args = cmd.split()
@@ -40,27 +44,28 @@ def process_local_command(cmd):
         if cmd_info[0] <= len(args[1:]) <= cmd_info[1]:
             cmd_info[2](args[1:])
         else:
-            print 'Invalid number of arguments for command %s' % args[0]
+            print('Invalid number of arguments for command {}'.format(args[0]))
     else:
-        print 'Unknown command "%s"' % cmd
+        print('Unknown command "{}"'.format(cmd))
 
+        
 def main():
     usage = 'usage: %prog [options] <host>'
     parser = OptionParser(usage=usage)
     parser.add_option('-d', action='store_true', dest='debug',
-            help='enable debug messages')
+                      help='enable debug messages')
     parser.add_option('-v', action='store_true', dest='verbose',
-            help='be more verbose')
+                      help='be more verbose')
     parser.add_option('-V', action='store_true', dest='version',
-            help='show version')
+                      help='show version')
     parser.add_option('--always-check-esr', action='store_true',
-            dest='check_esr',
-            help='Check the error status register after every command')
+                      dest='check_esr',
+                      help='Check the error status register after every command')
 
     (options, args) = parser.parse_args()
 
     if options.version:
-        print '%s v%s' % (os.path.basename(sys.argv[0]), __version__)
+        print('{} v{}'.format(os.path.basename(sys.argv[0]), __version__))
         sys.exit(0)
 
     logging.basicConfig()
@@ -70,7 +75,7 @@ def main():
         logging.getLogger('pyvxi11').setLevel(logging.DEBUG)
 
     if len(args) < 1:
-        print parser.format_help()
+        print(parser.format_help())
         sys.exit(1)
 
     host = args[0]
@@ -78,7 +83,8 @@ def main():
     v = Vxi11(host)
     v.open()
 
-    print "Enter command to send. Quit with 'q'."
+    print("Enter command to send. Quit with 'q'.")
+
     try:
         while True:
             cmd = raw_input('=> ')
@@ -91,19 +97,20 @@ def main():
                 is_query = cmd.split(' ')[0][-1] == '?'
                 try:
                     if is_query:
-                        print v.ask(cmd)
+                        print(v.ask(cmd))
                     else:
                         v.write(cmd)
                     if options.check_esr:
                         esr = int(v.ask('*ESR?').strip())
                         if esr != 0:
-                            print 'Warning: ESR was %d' % esr
-                except Vxi11Error, e:
-                    print 'ERROR: %s' % e
+                            print('Warning: ESR was {}'.format(esr))
+                except Vxi11Error as e:
+                    print('ERROR: {}'.format(e))
     except EOFError:
-        print 'exitting..'
+        print('exitting..')
 
     v.close()
+
 
 if __name__ == '__main__':
     main()

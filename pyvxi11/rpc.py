@@ -38,16 +38,27 @@ AUTH_BADVERF = 3       # bad verifier (seal broken)
 AUTH_REJECTEDVERF = 4  # verifier expired or replayed
 AUTH_TOOWEAK = 5       # rejected for security reasons
 
+
 class RpcError(Exception):
     pass
+
+
 class RpcGenericDecodeError(RpcError):
     pass
+
+
 class RpcBadVersion(RpcError):
     pass
+
+
 class RpcGarbageArgumentsError(RpcError):
     pass
+
+
 class RpcProcedureUnavailableError(RpcError):
     pass
+
+
 class RpcVersionMismatchError(RpcError):
     pass
 
@@ -90,6 +101,7 @@ class RpcPacker(xdrlib.Packer):
         self.pack_enum(SUCCESS)
         # Caller must add procedure-specific part of reply
 
+
 class RpcUnpacker(xdrlib.Unpacker):
     def unpack_auth(self):
         flavor = self.unpack_enum()
@@ -125,7 +137,7 @@ class RpcUnpacker(xdrlib.Unpacker):
             if reject_stat == RPC_MISMATCH:
                 low = self.unpack_uint()
                 high = self.unpack_uint()
-                raise RpcVersionMismatchError(high,low)
+                raise RpcVersionMismatchError(high, low)
             elif reject_stat == AUTH_ERROR:
                 auth_stat = self.unpack_uint()
                 raise RpcAuthFailedError(auth_stat)
@@ -321,8 +333,8 @@ class RawTCPClient(RpcClient):
         xid, verf = self.unpacker.unpack_replyheader()
         if xid != self.last_xid:
             # can't really happen since this is TCP
-            raise RuntimeError('wrong xid in reply %d insted of %d' %
-                    (xid, self.last_xid))
+            raise RuntimeError('wrong xid in reply {} insted of {}'.format(
+                    (xid, self.last_xid)))
 
 
 class CommonPortMapperClient:
@@ -332,23 +344,28 @@ class CommonPortMapperClient:
 
     def set(self, mapping):
         return self.make_call(PMAPPROC_SET, mapping,
-                self.packer.pack_mapping, self.unpacker.unpack_uint)
+                              self.packer.
+                              pack_mapping,
+                              self.unpacker.
+                              unpack_uint)
 
     def unset(self, mapping):
-        return self.make_call(PMAPPROC_UNSET, mapping,
-                self.packer.pack_mapping, self.unpacker.unpack_uint)
+        return self.make_call(PMAPPROC_UNSET, mapping, self.packer.
+                              pack_mapping, self.unpacker. unpack_uint)
 
     def get_port(self, mapping):
         return self.make_call(PMAPPROC_GETPORT, mapping,
-                self.packer.pack_mapping, self.unpacker.unpack_uint)
+                              self.packer.pack_mapping,
+                              self.unpacker.unpack_uint)
 
     def dump(self):
-        return self.make_call(PMAPPROC_DUMP, None,
-                None, self.unpacker.unpack_pmaplist)
+        return self.make_call(PMAPPROC_DUMP, None, None,
+                              self.unpacker.unpack_pmaplist)
 
     def callit(self, call_args):
         return self.make_call(PMAPPROC_CALLIT, call_args,
-                self.packer.pack_call_args, self.unpacker.unpack_call_result)
+                              self.packer.pack_call_args,
+                              self.unpacker.unpack_call_result)
 
 
 class TCPPortMapperClient(CommonPortMapperClient, RawTCPClient):
