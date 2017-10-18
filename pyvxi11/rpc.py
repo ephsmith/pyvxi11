@@ -39,6 +39,18 @@ AUTH_REJECTEDVERF = 4  # verifier expired or replayed
 AUTH_TOOWEAK = 5       # rejected for security reasons
 
 
+class RpcProgramMismatchError(Exception):
+    pass
+
+
+class RpcProgramUnavailableError(Exception):
+    pass
+
+
+class RpcAuthFailedError(Exception):
+    pass
+
+
 class RpcError(Exception):
     pass
 
@@ -64,10 +76,21 @@ class RpcVersionMismatchError(RpcError):
 
 
 def make_auth_null():
-    return ''
+    return b''
 
 
 class RpcPacker(xdrlib.Packer):
+
+    # def pack_fstring(self, n, s):
+    #     if n < 0:
+    #         raise ValueError, 'fstring size must be nonnegative'
+    #     data = s[:n]
+    #     n = ((n+3)//4)*4
+    #     data = data + (n - len(data)) * '\0'
+    #     self.__buf.write(data)
+
+    # pack_fopaque = pack_fstring
+
     def pack_auth(self, auth):
         flavor, stuff = auth
         self.pack_enum(flavor)
@@ -112,7 +135,7 @@ class RpcUnpacker(xdrlib.Unpacker):
         xid = self.unpack_uint(xid)
         mtype = self.unpack_enum()
         if mtype != CALL:
-            raise RpcGenericDecodeError('No CALL but %d' % mtype)
+            raise RpcGenericDecodeError('No CALL but {}'.format(mtype))
         rpc_version = self.unpack_uint()
         if rpc_version != RPCVERSION:
             raise RpcBadVersion(rpc_version)
@@ -129,7 +152,7 @@ class RpcUnpacker(xdrlib.Unpacker):
         mtype = self.unpack_enum()
 
         if mtype != REPLY:
-            raise RpcGenericDecodeError('No REPLY but %d' % mtype)
+            raise RpcGenericDecodeError('No REPLY but {}'.format(mtype))
 
         reply_stat = self.unpack_enum()
         if reply_stat == MSG_DENIED:
@@ -141,25 +164,25 @@ class RpcUnpacker(xdrlib.Unpacker):
             elif reject_stat == AUTH_ERROR:
                 auth_stat = self.unpack_uint()
                 raise RpcAuthFailedError(auth_stat)
-            raise RpcGenericDecodeError('unknown reject_stat %d', reject_stat)
+            raise RpcGenericDecodeError('unknown reject_stat {}'.format(reject_stat))
         elif reply_stat != MSG_ACCEPTED:
-            raise RpcGenericDecodeError('unknown reply_stat %d', reply_stat)
+            raise RpcGenericDecodeError('unknown reply_stat {}'.format(reply_stat))
 
         verf = self.unpack_auth()
         accept_stat = self.unpack_enum()
-        
+
         if accept_stat == PROG_UNAVAIL:
             raise RpcProgramUnavailableError()
         elif accept_stat == PROG_MISMATCH:
             low = self.unpack_uint()
             high = self.unpack_uint()
-            raise RpcProgramMismatchError(high,low)
+            raise RpcProgramMismatchError(high, low)
         elif accept_stat == PROC_UNAVAIL:
-            raise RpcProcedureUnavailableError(high,low)
+            raise RpcProcedureUnavailableError(high, low)
         elif accept_stat == GARBAGE_ARGS:
             raise RpcGarbageArgumentsError()
         elif accept_stat != SUCCESS:
-            raise RpcGenericDecodeError('unknown accept_stat %d', accept_stat)
+            raise RpcGenericDecodeError('unknown accept_stat {}'.format(accept_stat))
         return xid, verf
         # Caller must get procedure-specific part of reply
 
@@ -275,7 +298,7 @@ class RpcClient(object):
             result = None
         self.unpacker.done()
         return result
-        
+
     def call0(self):
         # Procedure 0 is always like this
         return self.make_call(0, None, None, None)
@@ -306,7 +329,7 @@ class RawTCPClient(RpcClient):
         while not last:
             frag, last = self.recv_fragment()
             record.append(frag)
-        return ''.join(record)
+        return b''.join(record)
 
     def recv_fragment(self):
         header = self.sock.recv(4)
@@ -323,7 +346,7 @@ class RawTCPClient(RpcClient):
             n_received += len(b)
             buf.append(b)
 
-        return ''.join(buf), last
+        return b''.join(buf), last
 
     def do_call(self):
         buf = self.packer.get_buf()
@@ -340,7 +363,7 @@ class RawTCPClient(RpcClient):
 class CommonPortMapperClient:
     def __init__(self):
         self.packer = PortMapperPacker()
-        self.unpacker = PortMapperUnpacker('')
+        self.unpacker = PortMapperUnpacker(b'')
 
     def set(self, mapping):
         return self.make_call(PMAPPROC_SET, mapping,

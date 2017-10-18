@@ -56,11 +56,14 @@ REASON_REQCNT = 1
 REASON_CHR = 2
 REASON_END = 4
 
+
 def chunks(d, n):
-    for i in xrange(0, len(d), n):
+    for i in range(0, len(d), n):
         yield d[i:i+n]
 
+
 log = logging.getLogger(__name__)
+
 
 class Vxi11Packer(rpc.RpcPacker):
     def pack_device_link(self, link):
@@ -120,12 +123,12 @@ class Vxi11Unpacker(rpc.RpcUnpacker):
 class Vxi11Client(rpc.RawTCPClient):
     def __init__(self, host):
         self.packer = Vxi11Packer()
-        self.unpacker = Vxi11Unpacker('')
+        self.unpacker = Vxi11Unpacker(b'')
         pmap = rpc.TCPPortMapperClient(host)
         mapping = (DEVICE_CORE_PROG, DEVICE_CORE_VERS, rpc.IPPROTO_TCP, 0)
         port = pmap.get_port(mapping)
         pmap.close()
-        log.debug('VXI-11 uses port %d', port)
+        log.debug('VXI-11 uses port {}'.format(port))
 
         rpc.RawTCPClient.__init__(self, host, DEVICE_CORE_PROG,
                                   DEVICE_CORE_VERS, port)
@@ -173,7 +176,7 @@ class Vxi11:
             self.name = name
 
     def open(self):
-        log.info('Opening connection to %s', self.host)
+        log.info('Opening connection to {}'.format(self.host))
 
         # If no client id was given, get it from the Vxi11 object
         client_id = self.client_id
@@ -181,7 +184,7 @@ class Vxi11:
             client_id = id(self) & 0x7fffffff
         error, link_id, abort_port, max_recv_size = \
                         self.vxi11_client.create_link(client_id, 0, 0, self.name)
-
+        
         if error != 0:
             raise RuntimeError('TBD')
 
@@ -189,19 +192,19 @@ class Vxi11:
         # As a workaround we set an upper boundary of 16k
         max_recv_size = min(max_recv_size, 16*1024)
 
-        log.debug('link id is %d, max_recv_size is %d',
-                  link_id, max_recv_size)
+        log.debug('link id is {}, max_recv_size is {}'.format(
+                  link_id, max_recv_size))
 
         self.link_id = link_id
         self.max_recv_size = max_recv_size
 
     def close(self):
-        log.info('Close connection to %s', self.host)
+        log.info('Close connection to {}'.format(self.host))
         self.vxi11_client.destroy_link(self.link_id)
         self.vxi11_client.close()
 
     def write(self, message):
-        log.debug('Writing %d bytes (%s)', len(message), message)
+        log.debug('Writing {} bytes ({})'.format(len(message), message))
         io_timeout = self.io_timeout * 1000       # in ms
         lock_timeout = self.lock_timeout * 1000   # in ms
         flags = 0
@@ -242,9 +245,9 @@ class Vxi11:
             if error != ERR_NO_ERROR:
                 raise Vxi11Error(error)
             data_list.append(data)
-            log.debug('Received %d bytes', len(data))
+            log.debug('Received {} bytes'.format(len(data)))
 
             if reason & REASON_REQCNT:
                 reason &= ~REASON_REQCNT
 
-        return ''.join(data_list)
+        return b''.join(data_list)
