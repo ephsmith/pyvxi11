@@ -74,6 +74,8 @@ class Vxi11Packer(rpc.RpcPacker):
         self.pack_int(id)
         self.pack_bool(lock_device)
         self.pack_uint(lock_timeout)
+        if isinstance(device, str):
+            device = device.encode()
         self.pack_string(device)
 
     def pack_device_write_parms(self, params):
@@ -82,6 +84,8 @@ class Vxi11Packer(rpc.RpcPacker):
         self.pack_uint(io_timeout)
         self.pack_uint(lock_timeout)
         self.pack_int(flags)
+        if isinstance(data, str):
+            data.encode()
         self.pack_opaque(data)
 
     def pack_device_read_parms(self, params):
@@ -204,6 +208,8 @@ class Vxi11:
         self.vxi11_client.close()
 
     def write(self, message):
+        if isinstance(message, str):
+            message = message.encode()
         log.debug('Writing {} bytes ({})'.format(len(message), message))
         io_timeout = self.io_timeout * 1000       # in ms
         lock_timeout = self.lock_timeout * 1000   # in ms
