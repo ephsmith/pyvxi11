@@ -256,4 +256,4 @@ class Vxi11:
             if reason & REASON_REQCNT:
                 reason &= ~REASON_REQCNT
 
-        return b''.join(data_list)
+            return b''.join(data_list)

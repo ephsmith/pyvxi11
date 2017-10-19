@@ -97,7 +97,7 @@ def main():
                 is_query = cmd.split(' ')[0][-1] == '?'
                 try:
                     if is_query:
-                        print(v.ask(cmd))
+                        print(v.ask(cmd).decode())
                     else:
                         v.write(cmd)
                     if options.check_esr:
